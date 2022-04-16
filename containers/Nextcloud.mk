@@ -9,18 +9,36 @@
 NEXTCLOUD=nextcloud
 DATABASE=next_db
 NEXTCLOUD_PORT=8000
-DATABASE_PORT=3306
+SERVICE_DIR=~/.config/systemd/user
+IP_ADDRESS=192.168.1.232
 
-# Pass names
+# Password names
 NEXTCLOUD_PASS=nextcloud_admin
 NEXTCLOUD_DB=next_db
 NEXTCLOUD_DB_ROOT=next_db_root
 
+help:
+	@echo "USAGE: make TARGET [TARGET...]"
+	@echo "Targets:"
+	@echo -e "   help\tDisplay this help message" | expand -t 15
+	@echo -e "   container\tCreate container" | expand -t 15
+	@echo -e "   name\tPrint container name" | expand -t 15
+	@echo -e "   port\tList ports used by container" | expand -t 15
+	@echo -e "   start\tStart container" | expand -t 15
+	@echo -e "   stop\tStop container" | expand -t 15
+	@echo -e "   install\tInstall systemd service files for container" | expand -t 15
+	@echo -e "   enable\tEnable systemd service files for container" | expand -t 15
+	@echo -e "   remove\tRemove container" | expand -t 15
+	@echo -e "   disable\tDisable systemd service files for container" | expand -t 15
+	@echo -e "   clean\tClean up everything" | expand -t 15
+
 container:
 	mkdir -p -- "$(SRV_LOCATION)/$(DATABASE)"
+	podman pod create --name nextcloud-pod \
+		-p $(NEXTCLOUD_PORT):80
 	podman create --name $(DATABASE) \
 		--label "io.containers.autoupdate=image" \
-		-p $(DATABASE_PORT):3306 \
+		--pod nextcloud-pod \
 		-v $(SRV_LOCATION)/$(DATABASE):/var/lib/mysql:z \
 		-e MYSQL_ROOT_PASSWORD="$(shell pass $(NEXTCLOUD_DB_ROOT))" \
 		-e MYSQL_PASSWORD="$(shell pass $(NEXTCLOUD_DB))" \
@@ -34,12 +52,12 @@ container:
 	mkdir -p -- "$(STORAGE_LOCATION)/$(NEXTCLOUD)"
 	podman create --name $(NEXTCLOUD) \
 		--label "io.containers.autoupdate=image" \
-		-p $(NEXTCLOUD_PORT):80 \
+		--pod nextcloud-pod \
 		-v $(SRV_LOCATION)/$(NEXTCLOUD):/var/www/html:z \
 		-v $(STORAGE_LOCATION)/$(NEXTCLOUD):/var/www/html/data:z \
 		-e NEXTCLOUD_ADMIN_USER="ncadmin" \
 		-e NEXTCLOUD_ADMIN_PASSWORD="$(shell pass $(NEXTCLOUD_PASS))" \
-		-e MYSQL_HOST=$(IP_ADDRESS) \
+		-e MYSQL_HOST=localhost \
 		-e MYSQL_DATABASE=nextcloud \
 		-e MYSQL_USER=nextcloud \
 		-e MYSQL_PASSWORD="$(shell pass $(NEXTCLOUD_DB))" \
@@ -50,7 +68,7 @@ name:
 	@echo "$(NEXTCLOUD)/$(DATABASE)"
 
 port:
-	@echo "$(NEXTCLOUD_PORT)/$(DATABASE_PORT)"
+	@echo "$(NEXTCLOUD_PORT)"
 
 password:
 	@printf '%s:\t%s\n' "$(NEXTCLOUD)" "$(NEXTCLOUD_PASS)" | expand -t 15
@@ -83,3 +101,5 @@ disable:
 clean: stop remove disable
 	-rm $(SERVICE_DIR)/$(DATABASE).service
 	-rm $(SERVICE_DIR)/$(NEXTCLOUD).service
+
+.PHONY: help conatiner name port password start stop install enable disable clean

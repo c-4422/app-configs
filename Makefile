@@ -15,6 +15,21 @@ SERVICE_DIR = ~/.config/systemd/user
 
 SUBDIRS := $(wildcard *containers/*.mk)
 
+help:
+	@echo "USAGE: make TARGET [TARGET...]"
+	@echo "Targets:"
+	@echo -e "   help\tDisplay this help message" | expand -t 15
+	@echo -e "   all\tCreate and start containers" | expand -t 15
+	@echo -e "   list\tList all containers" | expand -t 15
+	@echo -e "   start\tStart all containers" | expand -t 15
+	@echo -e "   stop\tStop all containers" | expand -t 15
+	@echo -e "   install\tInstall systemd service files for all containers" | expand -t 15
+	@echo -e "   enable\tEnable systemd service files for all containers" | expand -t 15
+	@echo -e "   remove\tRemove all containers" | expand -t 15
+	@echo -e "   disable\tDisable systemd service files for all containers" | expand -t 15
+	@echo -e "   clean\tClean up and remove all containers" | expand -t 15
+	@echo -e "   update\tUpdate all containers using the update script" | expand -t 15
+
 all:
 	@export IP_ADDRESS=$(IP_ADDRESS) && export SERVICE_DIR=$(SERVICE_DIR) \
 	$(foreach file, $(SUBDIRS), make -f $(file);)
@@ -43,20 +58,5 @@ list:
 	@printf '+-------------------+---------------------------------------+----------\n'
 	@$(foreach file, $(SUBDIRS), printf '|%s\t|make -f %s\t|%s\n' "$(shell make -f $(file) name)" \
 	"$(file)" "$(shell make -f $(file) port)" | expand -t 20;)
-
-help:
-	@echo "USAGE: make TARGET [TARGET...]"
-	@echo "Targets:"
-	@echo -e "   help\t\t\tDisplay this help message"
-	@echo -e "   all (default)\tCreate and start containers"
-	@echo -e "   list\t\t\tList containers"
-	@echo -e "   start\t\tStart containers"
-	@echo -e "   stop\t\t\tStop containers"
-	@echo -e "   install\t\tInstall systemd service files for containers"
-	@echo -e "   enable\t\tEnable systemd service files for containers"
-	@echo -e "   remove\t\tRemove all containers"
-	@echo -e "   disable\t\tDisable systemd service files for containers"
-	@echo -e "   clean\t\tClean up everything"
-	@echo -e "   update\t\tTo update use the command: podman auto-update"
 
 .PHONY: all start stop install enable disable clean list help
