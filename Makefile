@@ -10,6 +10,7 @@
 # in the containers folder and this make file will set it
 # all up for you
 ###################################################################
+SHELL:=/bin/bash
 IP_ADDRESS=192.168.1.232
 SERVICE_DIR = ~/.config/systemd/user
 
@@ -48,6 +49,9 @@ enable:
 
 disable:
 	@$(foreach file, $(SUBDIRS), make -f $(file) disable;)
+
+remove:
+	@$(foreach file, $(SUBDIRS), make -f $(file) remove;)
 
 clean:
 	@$(foreach file, $(SUBDIRS), make -f $(file) clean;)

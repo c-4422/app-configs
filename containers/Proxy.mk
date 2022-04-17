@@ -1,6 +1,7 @@
 ###############################################################
 # PROXY Container Configuration File
 ###############################################################
+SHELL:=/bin/bash
 PROXY=proxy
 WEB_PORT=8181
 HTTP_PORT=80
@@ -39,7 +40,7 @@ port:
 	@echo "$(WEB_PORT)/$(HTTP_PORT)/$(HTTPS_PORT)"
 
 password:
-	@printf '%s:\t%s\n' "$(PROXY)" "N/A" | expand -t 15
+	@echo -e "$(PROXY):\tN/A" | expand -t 15
 
 start:
 	-systemctl --user start $(PROXY)
@@ -57,6 +58,9 @@ enable:
 
 disable:
 	-systemctl --user disable $(PROXY).service
+
+remove:
+	-podman rm $(PROXY)
 
 clean: stop remove disable
 	-rm $(SERVICE_DIR)/$(PROXY).service

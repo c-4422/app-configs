@@ -6,6 +6,7 @@
 # 353b5bd8ab63aa7d4f15f462ef001d7b12f1abd6d32b9f9751ef7d9df9b3462a
 #
 ###################################################################
+SHELL:=/bin/bash
 NEXTCLOUD=nextcloud
 DATABASE=next_db
 NEXTCLOUD_PORT=8000
@@ -34,7 +35,9 @@ help:
 
 container:
 	mkdir -p -- "$(SRV_LOCATION)/$(DATABASE)"
+	podman network create nextcloud_network
 	podman pod create --name nextcloud-pod \
+		--network nextcloud_network \
 		-p $(NEXTCLOUD_PORT):80
 	podman create --name $(DATABASE) \
 		--label "io.containers.autoupdate=image" \
@@ -57,7 +60,7 @@ container:
 		-v $(STORAGE_LOCATION)/$(NEXTCLOUD):/var/www/html/data:z \
 		-e NEXTCLOUD_ADMIN_USER="ncadmin" \
 		-e NEXTCLOUD_ADMIN_PASSWORD="$(shell pass $(NEXTCLOUD_PASS))" \
-		-e MYSQL_HOST=localhost \
+		-e MYSQL_HOST="$(DATABASE)" \
 		-e MYSQL_DATABASE=nextcloud \
 		-e MYSQL_USER=nextcloud \
 		-e MYSQL_PASSWORD="$(shell pass $(NEXTCLOUD_DB))" \
@@ -71,8 +74,8 @@ port:
 	@echo "$(NEXTCLOUD_PORT)"
 
 password:
-	@printf '%s:\t%s\n' "$(NEXTCLOUD)" "$(NEXTCLOUD_PASS)" | expand -t 15
-	@printf '%s:\t%s, %s\n' "$(DATABASE)" "$(NEXTCLOUD_DB_ROOT)" "$(NEXTCLOUD_DB)" | expand -t 15
+	@echo -e "$(NEXTCLOUD):\t$(NEXTCLOUD_PASS)" | expand -t 15
+	@echo -e "$(DATABASE):\t$(NEXTCLOUD_DB_ROOT), $(NEXTCLOUD_DB)" | expand -t 15
 
 start:
 	-systemctl --user start $(DATABASE)
@@ -89,17 +92,27 @@ stop:
 install:
 	podman generate systemd --new --name $(DATABASE) > $(SERVICE_DIR)/$(DATABASE).service
 	podman generate systemd --new --name $(NEXTCLOUD) > $(SERVICE_DIR)/$(NEXTCLOUD).service
+	podman generate systemd --new --name nextcloud-pod > $(SERVICE_DIR)/nextcloud-pod.service
 
 enable:
 	systemctl --user enable $(DATABASE).service
 	systemctl --user enable $(NEXTCLOUD).service
+	systemctl --user enable nextcloud-pod.service
 
 disable:
-	-systemctl --user disable $(DATABASE).service
-	-systemctl --user disable $(NEXTCLOUD).service
+	systemctl --user disable $(DATABASE).service
+	systemctl --user disable $(NEXTCLOUD).service
+	systemctl --user disable nextcloud-pod.service
+
+remove:
+	-podman rm $(DATABASE)
+	-podman rm $(NEXTCLOUD)
+	-podman pod rm nextcloud-pod
+	-podman network rm nextcloud_network
 
 clean: stop remove disable
+	-rm $(SERVICE_DIR)/nextcloud-pod.service
 	-rm $(SERVICE_DIR)/$(DATABASE).service
 	-rm $(SERVICE_DIR)/$(NEXTCLOUD).service
 
-.PHONY: help conatiner name port password start stop install enable disable clean
+.PHONY: help conatiner name port password start stop install enable disable remove clean
