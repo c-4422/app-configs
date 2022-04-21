@@ -32,8 +32,8 @@ help:
 	@echo -e "   update\tUpdate all containers using the update script" | expand -t 15
 
 all:
-	@export IP_ADDRESS=$(IP_ADDRESS) && export SERVICE_DIR=$(SERVICE_DIR) \
-	$(foreach file, $(SUBDIRS), make -f $(file);)
+	@export IP_ADDRESS=$(IP_ADDRESS) && export SERVICE_DIR=$(SERVICE_DIR)
+	@$(foreach file, $(SUBDIRS), make -f $(file) container;)
 
 start:
 	@$(foreach file, $(SUBDIRS), make -f $(file) start;)
