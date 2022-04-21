@@ -90,19 +90,20 @@ stop:
 	-podman stop $(NEXTCLOUD)
 
 install:
-	podman generate systemd --new --name $(DATABASE) > $(SERVICE_DIR)/$(DATABASE).service
-	podman generate systemd --new --name $(NEXTCLOUD) > $(SERVICE_DIR)/$(NEXTCLOUD).service
-	podman generate systemd --new --name nextcloud-pod > $(SERVICE_DIR)/nextcloud-pod.service
+	podman generate systemd --files --new --name nextcloud-pod
+	mv container-$(NEXTCLOUD).service $(SERVICE_DIR)/.
+	mv container-$(DATABASE).service $(SERVICE_DIR)/.
+	mv pod-nextcloud-pod.service $(SERVICE_DIR)/.
 
 enable:
-	systemctl --user enable $(DATABASE).service
-	systemctl --user enable $(NEXTCLOUD).service
-	systemctl --user enable nextcloud-pod.service
+	systemctl --user enable pod-nextcloud-pod.service
+	systemctl --user enable container-$(DATABASE).service
+	systemctl --user enable container-$(NEXTCLOUD).service
 
 disable:
-	systemctl --user disable $(DATABASE).service
-	systemctl --user disable $(NEXTCLOUD).service
-	systemctl --user disable nextcloud-pod.service
+	systemctl --user disable pod-nextcloud-pod.service
+	systemctl --user disable container-$(DATABASE).service
+	systemctl --user disable container-$(NEXTCLOUD).service
 
 remove:
 	-podman rm $(DATABASE)
@@ -111,8 +112,8 @@ remove:
 	-podman network rm nextcloud_network
 
 clean: stop remove disable
-	-rm $(SERVICE_DIR)/nextcloud-pod.service
-	-rm $(SERVICE_DIR)/$(DATABASE).service
-	-rm $(SERVICE_DIR)/$(NEXTCLOUD).service
+	-rm $(SERVICE_DIR)/pod-nextcloud-pod.service
+	-rm $(SERVICE_DIR)/container-$(DATABASE).service
+	-rm $(SERVICE_DIR)/container-$(NEXTCLOUD).service
 
 .PHONY: help conatiner name port password start stop install enable disable remove clean
