@@ -7,14 +7,19 @@
 #
 ###################################################################
 SHELL:=/bin/bash
-NEXTCLOUD=nextcloud
-DATABASE=next_db
+NEXTCLOUD_NAME=nextcloud
+DATABASE_NAME=next_db
 NEXTCLOUD_PORT=8000
 SERVICE_DIR=~/.config/systemd/user
-IP_ADDRESS=192.168.1.232
+NEXTCLOUD_TRUSTED_DOMAINS=192.168.1.232
+
+# Storage Locations
+DATABASE_APP_LOCATION=$(SRV_LOCATION)/$(DATABASE_NAME)
+NEXTCLOUD_APP_LOCATION=$(SRV_LOCATION)/$(NEXTCLOUD_NAME)
+NEXTCLOUD_STORAGE_LOCATION=$(STORAGE_LOCATION)/$(NEXTCLOUD_NAME)
 
 # Password names
-NEXTCLOUD_PASS=nextcloud_admin
+NEXTCLOUD_PASS=ncadmin
 NEXTCLOUD_DB=next_db
 NEXTCLOUD_DB_ROOT=next_db_root
 
@@ -34,15 +39,15 @@ help:
 	@echo -e "   clean\tClean up everything" | expand -t 15
 
 container:
-	mkdir -p -- "$(SRV_LOCATION)/$(DATABASE)"
+	mkdir -p -- "$(DATABASE_APP_LOCATION)"
 	podman network create nextcloud_network
 	podman pod create --name nextcloud-pod \
 		--network nextcloud_network \
 		-p $(NEXTCLOUD_PORT):80
-	podman create --name $(DATABASE) \
+	podman create --name $(DATABASE_NAME) \
 		--label "io.containers.autoupdate=image" \
 		--pod nextcloud-pod \
-		-v $(SRV_LOCATION)/$(DATABASE):/var/lib/mysql:z \
+		-v $(DATABASE_APP_LOCATION):/var/lib/mysql:z \
 		-e MYSQL_ROOT_PASSWORD="$(shell pass $(NEXTCLOUD_DB_ROOT))" \
 		-e MYSQL_PASSWORD="$(shell pass $(NEXTCLOUD_DB))" \
 		-e MYSQL_DATABASE=nextcloud \
@@ -51,69 +56,69 @@ container:
 		-e --transaction-isolation=READ-COMMITTED \
 		-e --binlog-format=ROW \
 		docker.io/library/mariadb:latest
-	mkdir -p -- "$(SRV_LOCATION)/$(NEXTCLOUD)"
-	mkdir -p -- "$(STORAGE_LOCATION)/$(NEXTCLOUD)"
-	podman create --name $(NEXTCLOUD) \
+	mkdir -p -- "$(NEXTCLOUD_APP_LOCATION)"
+	mkdir -p -- "$(NEXTCLOUD_STORAGE_LOCATION)"
+	podman create --name $(NEXTCLOUD_NAME) \
 		--label "io.containers.autoupdate=image" \
 		--pod nextcloud-pod \
-		-v $(SRV_LOCATION)/$(NEXTCLOUD):/var/www/html:z \
-		-v $(STORAGE_LOCATION)/$(NEXTCLOUD):/var/www/html/data:z \
+		-v $(NEXTCLOUD_APP_LOCATION):/var/www/html:z \
+		-v $(NEXTCLOUD_STORAGE_LOCATION):/var/www/html/data:z \
 		-e NEXTCLOUD_ADMIN_USER="ncadmin" \
 		-e NEXTCLOUD_ADMIN_PASSWORD="$(shell pass $(NEXTCLOUD_PASS))" \
-		-e MYSQL_HOST="$(DATABASE)" \
+		-e MYSQL_HOST="$(DATABASE_NAME)" \
 		-e MYSQL_DATABASE=nextcloud \
 		-e MYSQL_USER=nextcloud \
 		-e MYSQL_PASSWORD="$(shell pass $(NEXTCLOUD_DB))" \
-		-e NEXTCLOUD_TRUSTED_DOMAINS="$(IP_ADDRESS)" \
+		-e NEXTCLOUD_TRUSTED_DOMAINS="$(NEXTCLOUD_TRUSTED_DOMAINS)" \
 		docker.io/library/nextcloud:stable
 
 name:
-	@echo "$(NEXTCLOUD)/$(DATABASE)"
+	@echo "$(NEXTCLOUD_NAME)/$(DATABASE_NAME)"
 
 port:
 	@echo "$(NEXTCLOUD_PORT)"
 
 password:
-	@echo -e "$(NEXTCLOUD):\t$(NEXTCLOUD_PASS)" | expand -t 15
-	@echo -e "$(DATABASE):\t$(NEXTCLOUD_DB_ROOT), $(NEXTCLOUD_DB)" | expand -t 15
+	@echo -e "$(NEXTCLOUD_NAME):\t$(NEXTCLOUD_PASS)" | expand -t 15
+	@echo -e "$(DATABASE_NAME):\t$(NEXTCLOUD_DB_ROOT), $(NEXTCLOUD_DB)" | expand -t 15
 
 start:
-	-systemctl --user start $(DATABASE)
-	podman start $(DATABASE)
-	-systemctl --user start $(NEXTCLOUD)
-	podman start $(NEXTCLOUD)
+	-systemctl --user start $(DATABASE_NAME)
+	podman start $(DATABASE_NAME)
+	-systemctl --user start $(NEXTCLOUD_NAME)
+	podman start $(NEXTCLOUD_NAME)
 
 stop:
-	-systemctl --user stop $(DATABASE)
-	-podman stop $(DATABASE)
-	-systemctl --user stop $(NEXTCLOUD)
-	-podman stop $(NEXTCLOUD)
+	-systemctl --user stop $(DATABASE_NAME)
+	-podman stop $(DATABASE_NAME)
+	-systemctl --user stop $(NEXTCLOUD_NAME)
+	-podman stop $(NEXTCLOUD_NAME)
 
 install:
 	podman generate systemd --files --new --name nextcloud-pod
-	mv container-$(NEXTCLOUD).service $(SERVICE_DIR)/.
-	mv container-$(DATABASE).service $(SERVICE_DIR)/.
+	mv container-$(NEXTCLOUD_NAME).service $(SERVICE_DIR)/.
+	mv container-$(DATABASE_NAME).service $(SERVICE_DIR)/.
 	mv pod-nextcloud-pod.service $(SERVICE_DIR)/.
 
 enable:
 	systemctl --user enable pod-nextcloud-pod.service
-	systemctl --user enable container-$(DATABASE).service
-	systemctl --user enable container-$(NEXTCLOUD).service
+	systemctl --user enable container-$(DATABASE_NAME).service
+	systemctl --user enable container-$(NEXTCLOUD_NAME).service
 
 disable:
 	systemctl --user disable pod-nextcloud-pod.service
-	systemctl --user disable container-$(DATABASE).service
-	systemctl --user disable container-$(NEXTCLOUD).service
+	systemctl --user disable container-$(DATABASE_NAME).service
+	systemctl --user disable container-$(NEXTCLOUD_NAME).service
 
 remove:
-	-podman rm $(DATABASE)
-	-podman rm $(NEXTCLOUD)
+	-podman rm $(DATABASE_NAME)
+	-podman rm $(NEXTCLOUD_NAME)
 	-podman pod rm nextcloud-pod
 	-podman network rm nextcloud_network
 
 clean: stop remove disable
 	-rm $(SERVICE_DIR)/pod-nextcloud-pod.service
-	-rm $(SERVICE_DIR)/container-$(DATABASE).service
-	-rm $(SERVICE_DIR)/container-$(NEXTCLOUD).service
+	-rm $(SERVICE_DIR)/container-$(DATABASE_NAME).service
+	-rm $(SERVICE_DIR)/container-$(NEXTCLOUD_NAME).service
 
 .PHONY: help conatiner name port password start stop install enable disable remove clean
