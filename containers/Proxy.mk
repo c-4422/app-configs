@@ -42,6 +42,12 @@ port:
 password:
 	@echo -e "$(PROXY):\tN/A" | expand -t 15
 
+set-password:
+	@echo "N/A"
+
+show-password:
+	@echo "N/A"
+
 start:
 	-systemctl --user start $(PROXY)
 	podman start $(PROXY)

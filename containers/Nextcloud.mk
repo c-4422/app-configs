@@ -48,8 +48,8 @@ container:
 		--label "io.containers.autoupdate=image" \
 		--pod nextcloud-pod \
 		-v $(DATABASE_APP_LOCATION):/var/lib/mysql:z \
-		-e MYSQL_ROOT_PASSWORD="$(shell pass $(NEXTCLOUD_DB_ROOT))" \
-		-e MYSQL_PASSWORD="$(shell pass $(NEXTCLOUD_DB))" \
+		-e MYSQL_ROOT_PASSWORD="$(shell cpass $(NEXTCLOUD_DB_ROOT))" \
+		-e MYSQL_PASSWORD="$(shell cpass $(NEXTCLOUD_DB))" \
 		-e MYSQL_DATABASE=nextcloud \
 		-e MYSQL_USER=nextcloud \
 		-e --character-set-server=utf8mb4 \
@@ -64,11 +64,11 @@ container:
 		-v $(NEXTCLOUD_APP_LOCATION):/var/www/html:z \
 		-v $(NEXTCLOUD_STORAGE_LOCATION):/var/www/html/data:z \
 		-e NEXTCLOUD_ADMIN_USER="ncadmin" \
-		-e NEXTCLOUD_ADMIN_PASSWORD="$(shell pass $(NEXTCLOUD_PASS))" \
+		-e NEXTCLOUD_ADMIN_PASSWORD="$(shell cpass $(NEXTCLOUD_PASS))" \
 		-e MYSQL_HOST="$(DATABASE_NAME)" \
 		-e MYSQL_DATABASE=nextcloud \
 		-e MYSQL_USER=nextcloud \
-		-e MYSQL_PASSWORD="$(shell pass $(NEXTCLOUD_DB))" \
+		-e MYSQL_PASSWORD="$(shell cpass $(NEXTCLOUD_DB))" \
 		-e NEXTCLOUD_TRUSTED_DOMAINS="$(NEXTCLOUD_TRUSTED_DOMAINS)" \
 		docker.io/library/nextcloud:stable
 
@@ -81,6 +81,16 @@ port:
 password:
 	@echo -e "$(NEXTCLOUD_NAME):\t$(NEXTCLOUD_PASS)" | expand -t 15
 	@echo -e "$(DATABASE_NAME):\t$(NEXTCLOUD_DB_ROOT), $(NEXTCLOUD_DB)" | expand -t 15
+
+set-password:
+	@cpass set $(NEXTCLOUD_PASS)
+	@cpass set $(NEXTCLOUD_DB)
+	@cpass set $(NEXTCLOUD_DB_ROOT)
+
+show-password:
+	@echo "$(NEXTCLOUD_PASS)=$(shell cpass set $(NEXTCLOUD_PASS))
+	@echo "$(NEXTCLOUD_DB)=$(shell cpass set $(NEXTCLOUD_DB))
+	@echo "$(NEXTCLOUD_DB_ROOT)=$(shell cpass set $(NEXTCLOUD_DB_ROOT))
 
 start:
 	-systemctl --user start $(DATABASE_NAME)
