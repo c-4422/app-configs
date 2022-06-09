@@ -1,5 +1,5 @@
 ##################################################################
-# PROXY Container Configuration File
+# Template Makefile for custom containers
 #
 # by C-4422
 # 9b6b87bf3d3f44de936e7283ce4e555402feb741a005dfdc70cbbe2f08581911
@@ -7,59 +7,62 @@
 #
 ##################################################################
 SHELL:=/bin/bash
-PROXY=proxy
-WEB_PORT=8181
-HTTP_PORT=80
-HTTPS_PORT=443
 SERVICE_DIR=~/.config/systemd/user
+CONTAINER_NAME=container
+PORT=8888
+
+# Passwords can be passed into container variables using
+# -e CONTAINER_PASSWORD_VARIABLE=$(shell pass $(OFFICE_SECRET))
+PASSWORD=password_name
+
+# Application Locations
+APP_LOCATION=$(SRV_LOCATION)/$(CONTAINER_NAME)
 
 container:
-	mkdir -p -- "$(SRV_LOCATION)/$(PROXY)"
-	podman create --name $(PROXY) \
+	mkdir -p -- "$(SRV_LOCATION)/$(CONTAINER_NAME)"
+	podman create --name $(CONTAINER_NAME) \
 		--label "io.containers.autoupdate=image" \
-		-p $(WEB_PORT):8181 \
-		-p $(HTTP_PORT):8080 \
-		-p $(HTTPS_PORT):4443 \
-		-v $(SRV_LOCATION)/$(PROXY):/config:z \
-		docker.io/jlesage/nginx-proxy-manager
+		-p $(PORT):80 \
+		-v $(APP_LOCATION):/home:z \
+		docker.io/alpine:latest
 
 name:
-	@echo "$(PROXY)"
+	@echo "$(CONTAINER_NAME)"
 
 port:
-	@echo "$(WEB_PORT)/$(HTTP_PORT)/$(HTTPS_PORT)"
+	@echo "$(PORT)"
 
 password:
-	@echo -e "$(PROXY):\tN/A" | expand -t 15
+	@printf '%s:\t%s\n' "$(CONTAINER_NAME)" "$(PASSWORD)" | expand -t 15
 
 set-password:
-	@echo "N/A"
+	@cpass set $(PASSWORD)
 
 show-password:
-	@echo "N/A"
+	@echo "$(PASSWORD)=$(shell cpass get $(PASSWORD))
 
 start:
-	-systemctl --user start $(PROXY)
-	podman start $(PROXY)
+	-systemctl --user start $(CONTAINER_NAME)
+	podman start $(CONTAINER_NAME)
 
 stop:
-	-systemctl --user stop $(PROXY)
-	-podman stop $(PROXY)
+	-systemctl --user stop $(CONTAINER_NAME)
+	-podman stop $(CONTAINER_NAME)
 
 install:
-	podman generate systemd --new --name $(PROXY) > $(SERVICE_DIR)/$(PROXY).service
+	podman generate systemd --new --name $(CONTAINER_NAME) > $(SERVICE_DIR)/$(CONTAINER_NAME).service
 
 enable:
-	systemctl --user enable $(PROXY).service
+	systemctl --user enable $(CONTAINER_NAME).service
 
 disable:
-	-systemctl --user disable $(PROXY).service
+	-systemctl --user disable $(CONTAINER_NAME).service
 
 remove:
-	-podman rm $(PROXY)
+	-podman rm $(CONTAINER_NAME)
 
 clean: stop remove disable
-	-rm $(SERVICE_DIR)/$(PROXY).service
+	-rm $(SERVICE_DIR)/$(CONTAINER_NAME).service
 
 help:
 	@echo "USAGE: make TARGET [TARGET...]"

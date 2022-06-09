@@ -7,10 +7,10 @@
 #
 ###################################################################
 SHELL:=/bin/bash
+SERVICE_DIR=~/.config/systemd/user
 NEXTCLOUD_NAME=nextcloud
 DATABASE_NAME=next_db
 NEXTCLOUD_PORT=8000
-SERVICE_DIR=~/.config/systemd/user
 NEXTCLOUD_TRUSTED_DOMAINS=192.168.1.232
 
 # Storage Locations
@@ -23,21 +23,6 @@ NEXTCLOUD_PASS=ncadmin
 NEXTCLOUD_DB=next_db
 NEXTCLOUD_DB_ROOT=next_db_root
 
-help:
-	@echo "USAGE: make TARGET [TARGET...]"
-	@echo "Targets:"
-	@echo -e "   help\tDisplay this help message" | expand -t 15
-	@echo -e "   container\tCreate container" | expand -t 15
-	@echo -e "   name\tPrint container name" | expand -t 15
-	@echo -e "   port\tList ports used by container" | expand -t 15
-	@echo -e "   start\tStart container" | expand -t 15
-	@echo -e "   stop\tStop container" | expand -t 15
-	@echo -e "   install\tInstall systemd service files for container" | expand -t 15
-	@echo -e "   enable\tEnable systemd service files for container" | expand -t 15
-	@echo -e "   remove\tRemove container" | expand -t 15
-	@echo -e "   disable\tDisable systemd service files for container" | expand -t 15
-	@echo -e "   clean\tClean up everything" | expand -t 15
-
 container:
 	mkdir -p -- "$(DATABASE_APP_LOCATION)"
 	podman network create nextcloud_network
@@ -48,8 +33,8 @@ container:
 		--label "io.containers.autoupdate=image" \
 		--pod nextcloud-pod \
 		-v $(DATABASE_APP_LOCATION):/var/lib/mysql:z \
-		-e MYSQL_ROOT_PASSWORD="$(shell cpass $(NEXTCLOUD_DB_ROOT))" \
-		-e MYSQL_PASSWORD="$(shell cpass $(NEXTCLOUD_DB))" \
+		-e MYSQL_ROOT_PASSWORD="$(shell cpass get $(NEXTCLOUD_DB_ROOT))" \
+		-e MYSQL_PASSWORD="$(shell cpass get $(NEXTCLOUD_DB))" \
 		-e MYSQL_DATABASE=nextcloud \
 		-e MYSQL_USER=nextcloud \
 		-e --character-set-server=utf8mb4 \
@@ -64,11 +49,11 @@ container:
 		-v $(NEXTCLOUD_APP_LOCATION):/var/www/html:z \
 		-v $(NEXTCLOUD_STORAGE_LOCATION):/var/www/html/data:z \
 		-e NEXTCLOUD_ADMIN_USER="ncadmin" \
-		-e NEXTCLOUD_ADMIN_PASSWORD="$(shell cpass $(NEXTCLOUD_PASS))" \
+		-e NEXTCLOUD_ADMIN_PASSWORD="$(shell cpass get $(NEXTCLOUD_PASS))" \
 		-e MYSQL_HOST="$(DATABASE_NAME)" \
 		-e MYSQL_DATABASE=nextcloud \
 		-e MYSQL_USER=nextcloud \
-		-e MYSQL_PASSWORD="$(shell cpass $(NEXTCLOUD_DB))" \
+		-e MYSQL_PASSWORD="$(shell cpass get $(NEXTCLOUD_DB))" \
 		-e NEXTCLOUD_TRUSTED_DOMAINS="$(NEXTCLOUD_TRUSTED_DOMAINS)" \
 		docker.io/library/nextcloud:stable
 
@@ -88,9 +73,9 @@ set-password:
 	@cpass set $(NEXTCLOUD_DB_ROOT)
 
 show-password:
-	@echo "$(NEXTCLOUD_PASS)=$(shell cpass set $(NEXTCLOUD_PASS))
-	@echo "$(NEXTCLOUD_DB)=$(shell cpass set $(NEXTCLOUD_DB))
-	@echo "$(NEXTCLOUD_DB_ROOT)=$(shell cpass set $(NEXTCLOUD_DB_ROOT))
+	@echo "$(NEXTCLOUD_PASS)=$(shell cpass get $(NEXTCLOUD_PASS))"
+	@echo "$(NEXTCLOUD_DB)=$(shell cpass get $(NEXTCLOUD_DB))"
+	@echo "$(NEXTCLOUD_DB_ROOT)=$(shell cpass get $(NEXTCLOUD_DB_ROOT))"
 
 start:
 	-systemctl --user start $(DATABASE_NAME)
@@ -131,4 +116,22 @@ clean: stop remove disable
 	-rm $(SERVICE_DIR)/container-$(DATABASE_NAME).service
 	-rm $(SERVICE_DIR)/container-$(NEXTCLOUD_NAME).service
 
-.PHONY: help conatiner name port password start stop install enable disable remove clean
+help:
+	@echo "USAGE: make TARGET [TARGET...]"
+	@echo "Targets:"
+	@echo -e "   help\tDisplay this help message" | expand -t 20
+	@echo -e "   container\tCreate container" | expand -t 20
+	@echo -e "   name\tPrint container name" | expand -t 20
+	@echo -e "   port\tList ports used by container" | expand -t 20
+	@echo -e "   password\tList names of passwords used by container" | expand -t 20
+	@echo -e "   set-password\tSet passwords for container" | expand -t 20
+	@echo -e "   show-password\tShow passwords for container" | expand -t 20
+	@echo -e "   start\tStart container" | expand -t 20
+	@echo -e "   stop\tStop container" | expand -t 20
+	@echo -e "   install\tInstall systemd service files for container" | expand -t 20
+	@echo -e "   enable\tEnable systemd service files for container" | expand -t 20
+	@echo -e "   remove\tRemove container" | expand -t 20
+	@echo -e "   disable\tDisable systemd service files for container" | expand -t 20
+	@echo -e "   clean\tClean up everything" | expand -t 20
+
+.PHONY: help container name port password set-password show-password password start stop install enable disable clean
