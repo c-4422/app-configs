@@ -8,7 +8,7 @@
 ###################################################################
 SHELL:=/bin/bash
 SERVICE_DIR=~/.config/systemd/user
-CONTAINER_NAME=database
+CONTAINER_NAME=onlyoffice
 PORT=8001
 
 # Pass names
